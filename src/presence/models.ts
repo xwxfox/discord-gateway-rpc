@@ -1,0 +1,70 @@
+import { z } from 'zod';
+
+export const TimestampsSchema = z.object({
+  start: z.number().nullable().optional(),
+  end: z.number().nullable().optional()
+});
+
+export type Timestamps = z.infer<typeof TimestampsSchema>;
+
+export const AssetsSchema = z.object({
+  large_image: z.string().nullable().optional(),
+  small_image: z.string().nullable().optional(),
+  large_text: z.string().nullable().optional(),
+  small_text: z.string().nullable().optional()
+});
+
+export type Assets = z.infer<typeof AssetsSchema>;
+
+export const PartySchema = z.object({
+  id: z.string(),
+  size: z.tuple([z.number(), z.number()])
+});
+
+export type Party = z.infer<typeof PartySchema>;
+
+export const ButtonSchema = z.object({
+  label: z.string(),
+  url: z.string().nullable().optional()
+});
+
+export type Button = z.infer<typeof ButtonSchema>;
+
+export const MetadataSchema = z.object({
+  button_urls: z.array(z.string()).nullable().optional()
+});
+export type Metadata = z.infer<typeof MetadataSchema>;
+
+export const ActivityTypeSchema = z.enum(['0', '1', '2', '3', '4', '5']).transform(Number);
+
+export type ActivityType = 0 | 1 | 2 | 3 | 4 | 5;
+
+export const ActivitySchema = z.object({
+  name: z.string(),
+  state: z.string().nullable().optional(),
+  details: z.string().nullable().optional(),
+  type: z.number().int().min(0).max(5).optional().default(0),
+  platform: z.string().nullable().optional(),
+  timestamps: TimestampsSchema.nullable().optional(),
+  assets: AssetsSchema.nullable().optional(),
+  buttons: z.array(z.string()).nullable().optional(),
+  metadata: MetadataSchema.nullable().optional(),
+  application_id: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
+  party: PartySchema.nullable().optional()
+});
+
+export type Activity = z.infer<typeof ActivitySchema>;
+
+export const StatusSchema = z.enum(['online', 'idle', 'dnd', 'invisible']);
+
+export type Status = z.infer<typeof StatusSchema>;
+
+export const PresenceSchema = z.object({
+  activities: z.array(ActivitySchema.nullable()).nullable().optional(),
+  afk: z.boolean().optional().default(true),
+  since: z.number().nullable().optional(),
+  status: StatusSchema.optional().default('online')
+});
+
+export type Presence = z.infer<typeof PresenceSchema>;

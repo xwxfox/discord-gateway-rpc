@@ -1,0 +1,22 @@
+{
+  "name": "discord-rpc-ts",
+  "version": "1.0.0",
+  "description": "Discord Rich Presence library for Bun",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --minify && tsc --emitDeclarationOnly",
+    "dev": "bun run ./src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "example": "bun run ./scripts/example.ts",
+    "disconnect": "bun run ./scripts/disconnect.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.6",
+    "typescript": "^5"
+  }
+}
