@@ -11,7 +11,7 @@ import type {
   Channel
 } from '@/gateway/types';
 import { ActivityBuilder } from '@/presence/builder';
-import { EventEmitter } from '@/events';
+import { EventEmitter } from '@paws/event-emitter';
 import { DEFAULT_APPLICATION_ID } from '@/constants';
 import type { Identify } from '@/gateway/types';
 

@@ -1,23 +1,26 @@
 {
-  "name": "discord-gateway-rpc",
-  "version": "1.0.0",
-  "description": "yummy websockets",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "author": "xwxfox",
-  "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --minify && tsc --emitDeclarationOnly",
-    "dev": "bun run ./src/index.ts",
-    "typecheck": "tsc --noEmit",
-    "example": "bun run ./scripts/example.ts",
-    "disconnect": "bun run ./scripts/disconnect.ts"
-  },
-  "dependencies": {
-    "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.3.6",
-    "typescript": "^5"
-  }
+    "name": "discord-gateway-rpc",
+    "version": "1.0.0",
+    "type": "module",
+    "private": true,
+    "author": "xwxfox",
+    "scripts": {
+        "build": "turbo run build",
+        "dev": "turbo run dev",
+        "typecheck": "turbo run typecheck",
+        "example": "bun run ./apps/paws/scripts/example.ts",
+        "disconnect": "bun run ./apps/paws/scripts/disconnect.ts"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.3.6",
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "turbo": "^2.8.0"
+    },
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "packageManager": "bun@1.2.0"
 }

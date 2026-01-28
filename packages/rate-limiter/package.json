@@ -1,0 +1,16 @@
+{
+  "name": "@paws/rate-limiter",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "zod": "^4.3.6",
+    "@paws/shared-types": "workspace:*"
+  }
+}

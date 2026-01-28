@@ -1,11 +1,10 @@
-import { EventEmitter } from '@/events';
+import { EventEmitter } from '@paws/event-emitter';
 import type {
   GatewayPayload,
   Identify,
   Resume,
   Heartbeat,
   Ready,
-  RateLimited,
   ChannelPinsUpdate,
   TypingStart,
   VoiceChannelEffectSend,
@@ -14,12 +13,13 @@ import type {
   MessagePollVoteRemove,
   Channel
 } from './types';
+import type { RateLimited } from "@paws/shared-types"
 import { OpCode } from './opcodes';
 import type { Presence } from '@/presence/models';
 import { DEFAULT_IDENTITY } from '@/constants';
-import { DebugLogger } from '@/utils/debugLogger';
-import { RateLimiter } from '@/utils/rateLimiter';
-import { ConnectionMonitor } from '@/utils/connectionMonitor';
+import { DebugLogger } from '@paws/debug-logger';
+import { RateLimiter } from '@paws/rate-limiter';
+import { ConnectionMonitor } from '@paws/connection-monitor';
 import type { SessionStorage, SessionData } from '@/storage/session';
 
 export interface DiscordGatewayEvents extends Record<string, unknown> {
@@ -267,7 +267,7 @@ export class DiscordWebSocket extends EventEmitter<DiscordGatewayEvents> {
 
     await this.sessionStorage.save(this.token, sessionData);
 
-    this.emit('ready', ready);
+    this.emit("ready", ready);
     this.emit('sessionRestored', this.sessionRestored);
     this.readyResolve?.();
     this.readyPromise = null;

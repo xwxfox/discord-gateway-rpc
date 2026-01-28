@@ -125,17 +125,6 @@ export const VoiceStateUpdateSchema = z.object({
 
 export type VoiceStateUpdate = z.infer<typeof VoiceStateUpdateSchema>;
 
-export const RateLimitedSchema = z.object({
-  opcode: z.number(),
-  retry_after: z.number(),
-  meta: z.object({
-    guild_id: z.string().optional(),
-    nonce: z.string().optional()
-  }).optional()
-});
-
-export type RateLimited = z.infer<typeof RateLimitedSchema>;
-
 export const ReadySchema = z.object({
   v: z.number(),
   user: z.object({

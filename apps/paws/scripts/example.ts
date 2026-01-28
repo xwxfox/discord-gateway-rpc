@@ -37,7 +37,7 @@ async function example() {
     .setTimestampMode('start-end')
     .setTimestamps();
 
-  await rpc.setActivity(builder);
+  // await rpc.setActivity(builder);
 
   console.log('waiting 10 seconds before clearing activity...');
   await new Promise(resolve => setTimeout(resolve, 10000));
