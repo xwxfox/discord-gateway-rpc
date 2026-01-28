@@ -10,6 +10,7 @@ export enum OpCode {
   INVALID_SESSION = 9,
   HELLO = 10,
   HEARTBEAT_ACK = 11,
+  REQUEST_SOUNDBOARD_SOUNDS = 31,
   UNKNOWN = -1
 }
 

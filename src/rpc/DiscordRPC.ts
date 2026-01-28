@@ -1,14 +1,37 @@
-import { DiscordWebSocket } from '../gateway/DiscordWebSocket';
-import type { Presence, Status } from '../presence/models';
-import { ActivityBuilder } from '../presence/builder';
-import { EventEmitter } from '../events';
-import { DEFAULT_APPLICATION_ID } from '../constants';
+import { DiscordWebSocket } from '@/gateway/DiscordWebSocket';
+import type { Presence, Status } from '@/presence/models';
+import type {
+  Ready,
+  ChannelPinsUpdate,
+  TypingStart,
+  VoiceChannelEffectSend,
+  WebhooksUpdate,
+  MessagePollVoteAdd,
+  MessagePollVoteRemove,
+  Channel
+} from '@/gateway/types';
+import { ActivityBuilder } from '@/presence/builder';
+import { EventEmitter } from '@/events';
+import { DEFAULT_APPLICATION_ID } from '@/constants';
 import type { Identify } from '@/gateway/types';
 
 export interface DiscordRPCEvents extends Record<string, unknown> {
-  ready: void;
+  ready: Ready;
+  resumed: void;
   error: Error;
   disconnected: { code: number; reason: string };
+  rateLimited: { opcode: number; retryAfter: number; meta?: unknown };
+  sessionRestored: boolean;
+  channelPinsUpdate: ChannelPinsUpdate;
+  typingStart: TypingStart;
+  voiceChannelEffectSend: VoiceChannelEffectSend;
+  webhooksUpdate: WebhooksUpdate;
+  messagePollVoteAdd: MessagePollVoteAdd;
+  messagePollVoteRemove: MessagePollVoteRemove;
+  guildMemberChunk: unknown;
+  channelCreate: Channel;
+  channelUpdate: Channel;
+  channelDelete: Channel;
 }
 
 export class DiscordRPC extends EventEmitter<DiscordRPCEvents> {
@@ -25,8 +48,12 @@ export class DiscordRPC extends EventEmitter<DiscordRPCEvents> {
   }
 
   private setupEventListeners(): void {
-    this.ws.on('ready', () => {
-      this.emit('ready', void 0);
+    this.ws.on('ready', (ready) => {
+      this.emit('ready', ready);
+    });
+
+    this.ws.on('resumed', () => {
+      this.emit('resumed', void 0);
     });
 
     this.ws.on('error', (error) => {
@@ -35,6 +62,54 @@ export class DiscordRPC extends EventEmitter<DiscordRPCEvents> {
 
     this.ws.on('disconnected', (data) => {
       this.emit('disconnected', data);
+    });
+
+    this.ws.on('rateLimited', (data) => {
+      this.emit('rateLimited', data);
+    });
+
+    this.ws.on('sessionRestored', (restored) => {
+      this.emit('sessionRestored', restored);
+    });
+
+    this.ws.on('channelPinsUpdate', (data) => {
+      this.emit('channelPinsUpdate', data);
+    });
+
+    this.ws.on('typingStart', (data) => {
+      this.emit('typingStart', data);
+    });
+
+    this.ws.on('voiceChannelEffectSend', (data) => {
+      this.emit('voiceChannelEffectSend', data);
+    });
+
+    this.ws.on('webhooksUpdate', (data) => {
+      this.emit('webhooksUpdate', data);
+    });
+
+    this.ws.on('messagePollVoteAdd', (data) => {
+      this.emit('messagePollVoteAdd', data);
+    });
+
+    this.ws.on('messagePollVoteRemove', (data) => {
+      this.emit('messagePollVoteRemove', data);
+    });
+
+    this.ws.on('guildMemberChunk', (data) => {
+      this.emit('guildMemberChunk', data);
+    });
+
+    this.ws.on('channelCreate', (data) => {
+      this.emit('channelCreate', data);
+    });
+
+    this.ws.on('channelUpdate', (data) => {
+      this.emit('channelUpdate', data);
+    });
+
+    this.ws.on('channelDelete', (data) => {
+      this.emit('channelDelete', data);
     });
   }
 
@@ -45,7 +120,6 @@ export class DiscordRPC extends EventEmitter<DiscordRPCEvents> {
   async setActivity(builder: ActivityBuilder): Promise<void> {
     builder.setApplicationId(this.applicationId);
     const activity = builder.build();
-    console.dir(activity);
     const presence: Presence = {
       activities: [activity],
       status: this.status,
@@ -90,6 +164,18 @@ export class DiscordRPC extends EventEmitter<DiscordRPCEvents> {
 
   isConnected(): boolean {
     return this.ws.isConnected();
+  }
+
+  getSessionInfo() {
+    return this.ws.getSessionInfo();
+  }
+
+  async hasStoredSession(): Promise<boolean> {
+    return await this.ws.hasStoredSession();
+  }
+
+  async clearSession(): Promise<void> {
+    await this.ws.clearSession();
   }
 
   disconnect(): void {

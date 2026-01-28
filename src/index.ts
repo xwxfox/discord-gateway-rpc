@@ -28,12 +28,36 @@ export {
   IdentifySchema,
   ResumeSchema,
   HeartbeatSchema,
-  ReadySchema
+  ReadySchema,
+  RequestSoundboardSoundsSchema,
+  RequestGuildMembersSchema,
+  VoiceStateUpdateSchema,
+  RateLimitedSchema,
+  GuildMemberChunkSchema,
+  ChannelPinsUpdateSchema,
+  TypingStartSchema,
+  VoiceChannelEffectSendSchema,
+  WebhooksUpdateSchema,
+  MessagePollVoteAddSchema,
+  MessagePollVoteRemoveSchema,
+  ChannelSchema
 } from '@/gateway/types';
-export type { GatewayPayload, Identify, Resume, Heartbeat, Ready, IdentifyProperties } from '@/gateway/types';
+export type { GatewayPayload, Identify, Resume, Heartbeat, Ready, IdentifyProperties, RequestSoundboardSounds, RequestGuildMembers, VoiceStateUpdate, RateLimited, GuildMemberChunk, GatewayIntentsType, Intent, ChannelPinsUpdate, TypingStart, VoiceChannelEffectSend, WebhooksUpdate, MessagePollVoteAdd, MessagePollVoteRemove, Channel } from '@/gateway/types';
+
+export { GatewayIntents } from '@/gateway/types';
 
 export { EventEmitter } from '@/events';
 export type { EventCallback } from '@/events';
 
 export { JsonConfigStorage, WebSocketConfigStorage, createConfigStorage } from '@/storage/config';
 export type { ConfigStorage } from '@/storage/config';
+
+export { FileSessionStorage, WebSocketSessionStorage, createSessionStorage } from '@/storage/sessionStorage';
+export type { SessionStorage, SessionData } from '@/storage/session';
+
+export { DebugLogger } from '@/utils/debugLogger';
+
+export { RateLimiter } from '@/utils/rateLimiter';
+
+export { ConnectionMonitor } from '@/utils/connectionMonitor';
+export type { ConnectionMetrics } from '@/utils/connectionMonitor';

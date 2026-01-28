@@ -1,10 +1,11 @@
 {
-  "name": "discord-rpc-ts",
+  "name": "discord-gateway-rpc",
   "version": "1.0.0",
-  "description": "Discord Rich Presence library for Bun",
+  "description": "yummy websockets",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "author": "xwxfox",
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node --minify && tsc --emitDeclarationOnly",
     "dev": "bun run ./src/index.ts",

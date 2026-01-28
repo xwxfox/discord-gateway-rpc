@@ -13,6 +13,8 @@ export class ActivityBuilder {
   private smallImage: string | null = null;
   private largeText: string | null = null;
   private smallText: string | null = null;
+  private largeImageUrl: string | null = null;
+  private smallImageUrl: string | null = null;
   private url: string | null = null;
   private applicationId: string | null = null;
   private buttons: string[] = [];
@@ -47,15 +49,17 @@ export class ActivityBuilder {
     return this;
   }
 
-  setLargeImage(image: string | null, text: string | null = null): this {
+  setLargeImage(image: string | null, text: string | null = null, imageUrl: string | null = null): this {
     this.largeImage = image;
     this.largeText = text;
+    this.largeImageUrl = imageUrl;
     return this;
   }
 
-  setSmallImage(image: string | null, text: string | null = null): this {
+  setSmallImage(image: string | null, text: string | null = null, imageUrl: string | null = null): this {
     this.smallImage = image;
     this.smallText = text;
+    this.smallImageUrl = imageUrl;
     return this;
   }
 
@@ -128,20 +132,25 @@ export class ActivityBuilder {
     const timestamps: Timestamps | null = this.buildTimestamps();
 
     const assets: Assets | null =
-      this.largeImage !== null || this.smallImage !== null
+      this.largeImage !== null ||
+      this.smallImage !== null ||
+      this.largeImageUrl !== null ||
+      this.smallImageUrl !== null
         ? {
-          large_image: this.largeImage,
-          small_image: this.smallImage,
-          large_text: this.sanitizeString(this.largeText),
-          small_text: this.sanitizeString(this.smallText)
-        }
+            large_image: this.largeImage,
+            small_image: this.smallImage,
+            large_text: this.sanitizeString(this.largeText),
+            small_text: this.sanitizeString(this.smallText),
+            large_image_url: this.largeImageUrl,
+            small_image_url: this.smallImageUrl
+          }
         : null;
 
     const metadata: Metadata | null =
       this.buttonUrls.length > 0
         ? {
-          button_urls: this.buttonUrls
-        }
+            button_urls: this.buttonUrls
+          }
         : null;
 
     const activityData: Record<string, unknown> = {
