@@ -142,7 +142,7 @@ export class DebugLogger {
 
         if (entry.data !== undefined) {
             const dataString = JSON.stringify(entry.data, null, 2);
-            message += `\n${dataString}`;
+            message += ` ${dataString}`;
         }
 
         return message;
@@ -150,6 +150,10 @@ export class DebugLogger {
 
     getLogs(): LogEntry[] {
         return [...this.logs];
+    }
+
+    getLogsPretty(): string {
+        return this.logs.map((entry) => this.formatLogEntry(entry)).join("\n")
     }
 
     clearLogs(): void {
