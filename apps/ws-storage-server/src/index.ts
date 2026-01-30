@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import { z } from "zod";
-import type { WebSocketServerConfig } from "../types";
-import type { BaseStorage } from "../adapters/base";
+import type { WebSocketServerConfig } from "@paws/storage/types";
+import type { BaseStorage } from "@paws/storage/adapters/base";
 import crypto from "node:crypto";
 import { DebugLogger } from "@paws/debug-logger";
 import { UserBucketManager } from './user-bucket-manager';

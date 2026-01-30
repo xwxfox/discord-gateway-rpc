@@ -1,16 +1,16 @@
 services:
   valkey:
     image: valkey/valkey:latest
-    container_name: valkey-server
+    container_name: valkey
     ports:
       - "6769:6379"
     volumes:
       - valkey-data:/data
       - type: bind
-        source: ${PWD}/valkey.conf
+        source: ${PWD}/config/valkey.conf
         target: /usr/local/etc/valkey/valkey.conf
 
-    command: valkey-server /usr/local/etc/valkey/valkey.conf
+    command: valkey-server /usr/local/etc/valkey/valkey.conf --requirepass "${VALKEY_PASSWORD:-changeme}"
     environment:
       - VALKEY_PASSWORD=${VALKEY_PASSWORD:-changeme}
     restart: unless-stopped
@@ -20,16 +20,18 @@ services:
       timeout: 5s
       retries: 5
 
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: valkey-dashboard
-    ports:
-    - "8081:8081"
+  ws-storage:
+    build:
+      context: ../../..
+      dockerfile: apps/ws-storage-server/example/Dockerfile
+    container_name: server
     environment:
-      - REDIS_HOSTS=local:valkey:6379:0:${VALKEY_PASSWORD:-changeme}
-    depends_on:
-      - valkey
-    restart: unless-stopped
+      PORT: 6970
+      REDIS_URL: redis://default:${VALKEY_PASSWORD:-changeme}@valkey:6379
+      REDIS_DB: 0
+      DEBUG: true
+    ports:
+      - "${PORT:-6970}:3000"
 
 volumes:
   valkey-data:

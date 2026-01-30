@@ -16,8 +16,8 @@ export class DebugLogger {
     private wsDebugEnabled: boolean;
 
     constructor(wsDebugEnabled?: boolean) {
-        this.enabled = wsDebugEnabled ?? process.env.WSDEBUG === 'true';
-        this.wsDebugEnabled = this.enabled;
+        this.enabled = true
+        this.wsDebugEnabled = wsDebugEnabled ?? process.env.WSDEBUG === 'true';
     }
 
     enable(): void {
@@ -108,7 +108,7 @@ export class DebugLogger {
     }
 
     logDebug(message: string, data?: unknown): void {
-        if (!this.enabled) return;
+        if (!this.enabled || !this.wsDebugEnabled) return;
 
         this.addLog({
             timestamp: Date.now(),

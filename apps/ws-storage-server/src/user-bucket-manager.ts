@@ -1,7 +1,7 @@
 import { RedisClient } from "bun";
 import { z } from "zod";
-import { BaseStorage } from "../adapters/base";
-import type { CollectionSchema, RedisConfig, UserBucketMetadata, StorageEvents } from "../types";
+import { BaseStorage } from "@paws/storage/adapters/base";
+import type { CollectionSchema, RedisConfig, UserBucketMetadata, StorageEvents } from "@paws/storage/types";
 import type { DebugLogger } from "@paws/debug-logger";
 import { UserRedisAdapter } from "./server-redis";
 
@@ -34,7 +34,7 @@ export class UserBucketManager<TCollections extends string = string, TSchema ext
       this.client = sharedClient;
     } else {
       const url = new URL(this.config.url);
-      
+
       const connectionString = `${url.protocol}//${url.username}:${url.password}@${url.host}${url.pathname}`;
       this.client = new RedisClient(connectionString, {
         autoReconnect: true,

@@ -1,0 +1,26 @@
+{
+  "name": "ws-storage-server",
+  "module": "./src/index.ts",
+  "main": "./src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "docker:up": "cd example && docker compose up",
+    "docker:up:b": "cd example && docker compose up --build",
+    "docker:up:d": "cd example && docker compose up -d",
+    "docker:up:bd": "cd example && docker compose up --build -d",
+    "docker:down": "cd example && docker compose down"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@paws/debug-logger": "workspace:*",
+    "@paws/event-emitter": "workspace:*",
+    "@paws/storage": "workspace:*",
+    "zod": "^4.3.6"
+  }
+}

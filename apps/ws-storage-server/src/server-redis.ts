@@ -1,7 +1,7 @@
 import { RedisClient } from "bun";
 import { z } from "zod";
-import { BaseStorage } from "../adapters/base";
-import type { CollectionSchema, RedisConfig, StorageEvents } from "../types";
+import { BaseStorage } from "@paws/storage/adapters/base";
+import type { CollectionSchema, RedisConfig, StorageEvents } from "@paws/storage/types";
 
 export class UserRedisAdapter<
     TCollections extends string,

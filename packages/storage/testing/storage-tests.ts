@@ -1,7 +1,7 @@
 import { DebugLogger } from '@paws/debug-logger';
 import { createStorage } from '../index';
 import { z } from "zod";
-import { WebSocketStorageServer } from './server';
+import { WebSocketStorageServer } from '../../../apps/ws-storage-server/src';
 function getSelfName(): string | undefined {
   const stack = new Error().stack;
   if (!stack) return undefined;
@@ -115,18 +115,6 @@ async function testFile() {
 async function testWs() {
   logger.logInfo("start test", getSelfName())
 
-  // start the example ws storage server
-  const server = new WebSocketStorageServer({
-    port: parseInt(process.env.PORT || "3000"),
-    validateToken: async (token: string) => {
-      logger.logDebug("Validating token:", token.substring(0, 10) + "...");
-      return true;
-    },
-  });
-
-  await server.start();
-  logger.logDebug("ws storage server started")
-
   try {
     const remoteEvents: { [key: string]: number } = {
       'client1': 0,
@@ -137,7 +125,7 @@ async function testWs() {
     const storage = createStorage(
       "websocket",
       {
-        url: "ws://localhost:3000/ws",
+        url: "ws://localhost:6970/ws",
         reconnectInterval: 1000,
         maxReconnectAttempts: 10,
         token: "meow moew meow"
@@ -165,7 +153,7 @@ async function testWs() {
     const storage2 = createStorage(
       "websocket",
       {
-        url: "ws://localhost:3000/ws",
+        url: "ws://localhost:6970/ws",
         reconnectInterval: 1000,
         maxReconnectAttempts: 10,
         token: "meow moew meow"
@@ -193,7 +181,7 @@ async function testWs() {
     const storage3 = createStorage(
       "websocket",
       {
-        url: "ws://localhost:3000/ws",
+        url: "ws://localhost:6970/ws",
         reconnectInterval: 1000,
         maxReconnectAttempts: 10,
         token: "meow moew meow"

@@ -1,8 +1,8 @@
 import { DebugLogger } from '@paws/debug-logger';
-import { createStorage } from '../index';
+import { createStorage } from '@paws/storage/index';
 import { z } from "zod";
-import { WebSocketStorageServer } from './server';
-import type { BaseStorage } from '../adapters/base';
+import { WebSocketStorageServer } from '../src';
+import type { BaseStorage } from '@paws/storage/adapters/base';
 
 type StressTestScenario = 'many-users-few-collections' | 'many-users-many-collections' | 'server-restart';
 
