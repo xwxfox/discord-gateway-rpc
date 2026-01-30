@@ -1,8 +1,10 @@
 import type { ServerWebSocket } from "bun";
 import { z } from "zod";
 import type { WebSocketServerConfig } from "../types";
+import type { BaseStorage } from "../adapters/base";
 import crypto from "node:crypto";
 import { DebugLogger } from "@paws/debug-logger";
+import { UserBucketManager } from './user-bucket-manager';
 
 const ClientHelloSchema = z.object({
   type: z.literal("hello"),
@@ -44,7 +46,31 @@ const ClientMessageSchemas = {
     collection: z.string(),
     id: z.string(),
   }),
+  adminListUsers: z.object({
+    action: z.literal("admin_list_users"),
+    id: z.string(),
+  }),
+  adminDeleteUser: z.object({
+    action: z.literal("admin_delete_user"),
+    id: z.string(),
+    userId: z.string(),
+  }),
+  adminUserInfo: z.object({
+    action: z.literal("admin_user_info"),
+    id: z.string(),
+    userId: z.string(),
+  }),
 } as const;
+
+type ClientMessageAction = z.infer<typeof ClientMessageSchemas.get>["action"] |
+  z.infer<typeof ClientMessageSchemas.set>["action"] |
+  z.infer<typeof ClientMessageSchemas.delete>["action"] |
+  z.infer<typeof ClientMessageSchemas.clear>["action"] |
+  z.infer<typeof ClientMessageSchemas.size>["action"] |
+  z.infer<typeof ClientMessageSchemas.keys>["action"] |
+  z.infer<typeof ClientMessageSchemas.adminListUsers>["action"] |
+  z.infer<typeof ClientMessageSchemas.adminDeleteUser>["action"] |
+  z.infer<typeof ClientMessageSchemas.adminUserInfo>["action"];
 
 const ServerEventSchemas = {
   connected: z.object({
@@ -83,33 +109,51 @@ type Response<T = unknown> = {
 };
 
 interface Client {
-  ws: ServerWebSocket;
+  ws: ServerWebSocket<any>;
   token: string;
   channelId: string;
   encryptionKey?: Buffer;
   iv?: Buffer;
   isAuthenticated: boolean;
+  storage?: BaseStorage;
 }
 
+
 export class WebSocketStorageServer {
-  private storage: Map<string, Map<string, unknown>> = new Map();
+  private userBucketManager: UserBucketManager;
   private clients: Set<Client> = new Set();
   private clientsByChannel: Map<string, Set<Client>> = new Map();
   private validateToken: (token: string) => Promise<boolean>;
   private port: number;
   private logger: DebugLogger;
+  private server: ReturnType<typeof Bun.serve> | null = null;
 
   constructor(config: WebSocketServerConfig = {}) {
     this.validateToken = config.validateToken ?? (async () => true);
     this.port = config.port ?? 3000;
-    this.initializeCollection("default");
-    this.logger = config.logger ? config.logger : new DebugLogger()
+    this.logger = config.logger ? config.logger : new DebugLogger();
+
+    const storageConfig = config.storage ?? {
+      url: "redis://default:changeme@localhost:6769",
+      database: 0,
+    };
+
+    const schema: Record<string, Record<string, z.ZodTypeAny>> = {};
+
+    this.userBucketManager = new UserBucketManager(
+      {
+        url: storageConfig.url,
+        database: storageConfig.database ?? 0,
+      },
+      schema,
+      this.logger
+    );
   }
 
-  private initializeCollection(name: string): void {
-    if (!this.storage.has(name)) {
-      this.storage.set(name, new Map());
-    }
+  async initialize(): Promise<void> {
+    this.logger.logInfo("Initializing UserBucketManager...");
+    await this.userBucketManager.initialize();
+    this.logger.logInfo("UserBucketManager initialized successfully");
   }
 
   private deriveChannelId(token: string): string {
@@ -168,25 +212,26 @@ export class WebSocketStorageServer {
   }
 
   private validateClientMessage(data: unknown): ClientMessage {
-    const parsed = z
-      .object({
-        action: z.enum(["get", "set", "delete", "clear", "size", "keys"]),
-        id: z.string(),
-      })
-      .safeParse(data);
+    const schemas = [
+      ClientMessageSchemas.get,
+      ClientMessageSchemas.set,
+      ClientMessageSchemas.delete,
+      ClientMessageSchemas.clear,
+      ClientMessageSchemas.size,
+      ClientMessageSchemas.keys,
+      ClientMessageSchemas.adminListUsers,
+      ClientMessageSchemas.adminDeleteUser,
+      ClientMessageSchemas.adminUserInfo,
+    ];
 
-    if (!parsed.success) {
-      throw new Error(`Invalid message structure: ${parsed.error.message}`);
+    for (const schema of schemas) {
+      const validated = schema.safeParse(data);
+      if (validated.success) {
+        return validated.data;
+      }
     }
 
-    const schema = ClientMessageSchemas[parsed.data.action];
-    const validated = schema.safeParse(data);
-
-    if (!validated.success) {
-      throw new Error(`Invalid ${parsed.data.action} message: ${validated.error.message}`);
-    }
-
-    return validated.data;
+    throw new Error(`Invalid message: could not match any valid schema`);
   }
 
   private send(ws: ServerWebSocket, response: Response, client: Client): void {
@@ -198,7 +243,7 @@ export class WebSocketStorageServer {
     }
   }
 
-  private sendEvent(ws: ServerWebSocket, event: ServerEvent): void {
+  private sendEvent(ws: ServerWebSocket<any>, event: ServerEvent): void {
     ws.send(JSON.stringify(event));
   }
 
@@ -226,120 +271,253 @@ export class WebSocketStorageServer {
     }
   }
 
-  private handleGet(message: z.infer<typeof ClientMessageSchemas.get>, client: Client): void {
-    this.initializeCollection(message.collection);
-    const collection = this.storage.get(message.collection);
-    const value = collection?.get(message.key) ?? null;
+  private async handleGet(message: z.infer<typeof ClientMessageSchemas.get>, client: Client): Promise<void> {
+    if (!client.storage) {
+      this.send(client.ws, {
+        id: message.id,
+        error: "Client not authenticated or storage not initialized",
+      }, client);
+      return;
+    }
 
-    this.send(client.ws, {
-      id: message.id,
-      result: { collection: message.collection, key: message.key, value },
-    }, client);
+    try {
+      const value = await (client.storage as BaseStorage<string, Record<string, Record<string, z.ZodTypeAny>>>).get(
+        message.collection,
+        message.key
+      );
+
+      this.send(client.ws, {
+        id: message.id,
+        result: { collection: message.collection, key: message.key, value },
+      }, client);
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
   }
 
-  private handleSet(message: z.infer<typeof ClientMessageSchemas.set>, client: Client): void {
-    this.initializeCollection(message.collection);
-    const collection = this.storage.get(message.collection);
-    collection?.set(message.key, message.value);
+  private async handleSet(message: z.infer<typeof ClientMessageSchemas.set>, client: Client): Promise<void> {
+    if (!client.storage) {
+      this.send(client.ws, {
+        id: message.id,
+        error: "Client not authenticated or storage not initialized",
+      }, client);
+      return;
+    }
 
-    this.send(client.ws, {
-      id: message.id,
-      result: { collection: message.collection, key: message.key },
-    }, client);
+    try {
+      await (client.storage as BaseStorage<string, Record<string, Record<string, z.ZodTypeAny>>>).set(
+        message.collection,
+        message.key,
+        message.value
+      );
 
-    this.broadcastToChannel(
-      client.channelId,
-      {
-        type: "event",
-        event: "set",
-        collection: message.collection,
-        key: message.key,
-        value: message.value,
-      },
-      client
-    );
-  }
+      this.send(client.ws, {
+        id: message.id,
+        result: { collection: message.collection, key: message.key },
+      }, client);
 
-  private handleDelete(message: z.infer<typeof ClientMessageSchemas.delete>, client: Client): void {
-    const collection = this.storage.get(message.collection);
-    const existed = collection?.delete(message.key) ?? false;
-
-    this.send(client.ws, {
-      id: message.id,
-      result: { success: existed },
-    }, client);
-
-    if (existed) {
       this.broadcastToChannel(
         client.channelId,
         {
           type: "event",
-          event: "delete",
+          event: "set",
           collection: message.collection,
           key: message.key,
+          value: message.value,
         },
         client
       );
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
     }
   }
 
-  private handleClear(message: z.infer<typeof ClientMessageSchemas.clear>, client: Client): void {
-    let count = 0;
-
-    if (message.collection) {
-      const collection = this.storage.get(message.collection);
-      if (collection) {
-        count = collection.size;
-        collection.clear();
-      }
-    } else {
-      for (const collection of this.storage.values()) {
-        count += collection.size;
-        collection.clear();
-      }
+  private async handleDelete(message: z.infer<typeof ClientMessageSchemas.delete>, client: Client): Promise<void> {
+    if (!client.storage) {
+      this.send(client.ws, {
+        id: message.id,
+        error: "Client not authenticated or storage not initialized",
+      }, client);
+      return;
     }
 
-    this.send(client.ws, {
-      id: message.id,
-      result: { count },
-    }, client);
+    try {
+      const success = await (client.storage as BaseStorage<string, Record<string, Record<string, z.ZodTypeAny>>>).delete(
+        message.collection,
+        message.key
+      );
 
-    this.broadcastToChannel(
-      client.channelId,
-      {
-        type: "event",
-        event: "clear",
-        collection: message.collection ?? "all",
-      },
-      client
-    );
+      this.send(client.ws, {
+        id: message.id,
+        result: { success },
+      }, client);
+
+      if (success) {
+        this.broadcastToChannel(
+          client.channelId,
+          {
+            type: "event",
+            event: "delete",
+            collection: message.collection,
+            key: message.key,
+          },
+          client
+        );
+      }
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
   }
 
-  private handleSize(message: z.infer<typeof ClientMessageSchemas.size>, client: Client): void {
-    let size = 0;
-
-    if (message.collection) {
-      size = this.storage.get(message.collection)?.size ?? 0;
-    } else {
-      for (const collection of this.storage.values()) {
-        size += collection.size;
-      }
+  private async handleClear(message: z.infer<typeof ClientMessageSchemas.clear>, client: Client): Promise<void> {
+    if (!client.storage) {
+      this.send(client.ws, {
+        id: message.id,
+        error: "Client not authenticated or storage not initialized",
+      }, client);
+      return;
     }
 
-    this.send(client.ws, {
-      id: message.id,
-      result: { size },
-    }, client);
+    try {
+      await (client.storage as BaseStorage<string, Record<string, Record<string, z.ZodTypeAny>>>).clear(
+        message.collection
+      );
+
+      this.send(client.ws, {
+        id: message.id,
+        result: { count: 0 },
+      }, client);
+
+      this.broadcastToChannel(
+        client.channelId,
+        {
+          type: "event",
+          event: "clear",
+          collection: message.collection ?? "all",
+        },
+        client
+      );
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
   }
 
-  private handleKeys(message: z.infer<typeof ClientMessageSchemas.keys>, client: Client): void {
-    const collection = this.storage.get(message.collection);
-    const keys = Array.from(collection?.keys() ?? []);
+  private async handleSize(message: z.infer<typeof ClientMessageSchemas.size>, client: Client): Promise<void> {
+    if (!client.storage) {
+      this.send(client.ws, {
+        id: message.id,
+        error: "Client not authenticated or storage not initialized",
+      }, client);
+      return;
+    }
 
-    this.send(client.ws, {
-      id: message.id,
-      result: { keys },
-    }, client);
+    try {
+      const size = await (client.storage as BaseStorage<string, Record<string, Record<string, z.ZodTypeAny>>>).size(
+        message.collection
+      );
+
+      this.send(client.ws, {
+        id: message.id,
+        result: { size },
+      }, client);
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
+  }
+
+  private async handleKeys(message: z.infer<typeof ClientMessageSchemas.keys>, client: Client): Promise<void> {
+    if (!client.storage) {
+      this.send(client.ws, {
+        id: message.id,
+        error: "Client not authenticated or storage not initialized",
+      }, client);
+      return;
+    }
+
+    try {
+      const keys = await (client.storage as BaseStorage<string, Record<string, Record<string, z.ZodTypeAny>>>).keys(
+        message.collection
+      );
+
+      this.send(client.ws, {
+        id: message.id,
+        result: { keys },
+      }, client);
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
+  }
+
+  private async handleAdminListUsers(message: z.infer<typeof ClientMessageSchemas.adminListUsers>, client: Client): Promise<void> {
+    try {
+      const userIds = this.userBucketManager.getAllUserIds();
+      const users = await Promise.all(
+        userIds.map(async (userId) => ({
+          userId,
+          metadata: await this.userBucketManager.getUserMetadata(userId),
+        }))
+      );
+
+      this.send(client.ws, {
+        id: message.id,
+        result: { users },
+      }, client);
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
+  }
+
+  private async handleAdminDeleteUser(message: z.infer<typeof ClientMessageSchemas.adminDeleteUser>, client: Client): Promise<void> {
+    try {
+      const success = await this.userBucketManager.deleteUserBucket(message.userId);
+
+      this.send(client.ws, {
+        id: message.id,
+        result: { success },
+      }, client);
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
+  }
+
+  private async handleAdminUserInfo(message: z.infer<typeof ClientMessageSchemas.adminUserInfo>, client: Client): Promise<void> {
+    try {
+      const metadata = await this.userBucketManager.getUserMetadata(message.userId);
+
+      this.send(client.ws, {
+        id: message.id,
+        result: { userId: message.userId, metadata },
+      }, client);
+    } catch (error) {
+      this.send(client.ws, {
+        id: message.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }, client);
+    }
   }
 
   private async handleHello(data: unknown, client: Client): Promise<void> {
@@ -389,6 +567,9 @@ export class WebSocketStorageServer {
     client.iv = iv;
     client.isAuthenticated = true;
 
+    const userBucket = await this.userBucketManager.ensureUserBucket(client.token);
+    client.storage = userBucket;
+
     if (!this.clientsByChannel.has(client.channelId)) {
       this.clientsByChannel.set(client.channelId, new Set());
     }
@@ -428,6 +609,15 @@ export class WebSocketStorageServer {
         case "keys":
           this.handleKeys(message, client);
           break;
+        case "admin_list_users":
+          this.handleAdminListUsers(message, client);
+          break;
+        case "admin_delete_user":
+          this.handleAdminDeleteUser(message, client);
+          break;
+        case "admin_user_info":
+          this.handleAdminUserInfo(message, client);
+          break;
       }
     } catch (error) {
       this.sendEvent(client.ws, {
@@ -437,16 +627,17 @@ export class WebSocketStorageServer {
     }
   }
 
-  start(port?: number): void {
+  async start(port?: number): Promise<void> {
+    await this.initialize();
     this.port = port ?? this.port;
 
-    Bun.serve({
+    this.server = Bun.serve({
       port: this.port,
       fetch(req, server) {
         const url = new URL(req.url);
 
         if (url.pathname === "/ws") {
-          const upgraded = server.upgrade(req);
+          const upgraded = server.upgrade(req, { data: undefined });
           if (upgraded) {
             return new Response(null, { status: 101 });
           }
@@ -525,6 +716,16 @@ export class WebSocketStorageServer {
     });
 
     this.logger.logDebug(`WebSocket Storage Server running on ws://localhost:${this.port}`);
+  }
+
+  async stop(): Promise<void> {
+    this.logger.logInfo('Stopping WebSocket Storage Server...');
+    if (this.server) {
+      await this.server.stop(true);
+      this.server = null;
+    }
+    await this.userBucketManager.close();
+    this.logger.logInfo('WebSocket Storage Server stopped');
   }
 }
 

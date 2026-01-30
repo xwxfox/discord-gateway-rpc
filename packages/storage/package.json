@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "testall": "bun run ./testing/storage-tests.ts"
+    "testall": "bun run ./testing/storage-tests.ts",
+    "stresstest": "bun run ./testing/stress-test.ts"
   },
   "dependencies": {
     "@paws/debug-logger": "workspace:*",

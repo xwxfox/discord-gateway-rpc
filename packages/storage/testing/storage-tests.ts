@@ -1,5 +1,6 @@
 import { DebugLogger } from '@paws/debug-logger';
-import { createStorage, z } from '../index';
+import { createStorage } from '../index';
+import { z } from "zod";
 import { WebSocketStorageServer } from './server';
 function getSelfName(): string | undefined {
   const stack = new Error().stack;
@@ -13,7 +14,11 @@ const schema = {
     data: z.object({
       message: z.string(),
       timestamp: z.number()
-    })
+    }),
+    w: z.object({
+      message: z.string(),
+      timestamp: z.number()
+    }),
   }
 } as const;
 const logger = new DebugLogger(true)
@@ -119,7 +124,7 @@ async function testWs() {
     },
   });
 
-  server.start();
+  await server.start();
   logger.logDebug("ws storage server started")
 
   try {
@@ -215,7 +220,7 @@ async function testWs() {
     logger.logDebug("Client 1 sets data");
     await storage.set('test', 'data', {
       message: 'Hello from client 1!',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -228,6 +233,10 @@ async function testWs() {
 
     logger.logDebug("Client 2 sets data");
     await storage2.set('test', 'data', {
+      message: 'Hello from client 2!',
+      timestamp: Date.now()
+    });
+    await storage2.set('test', 'w', {
       message: 'Hello from client 2!',
       timestamp: Date.now()
     });

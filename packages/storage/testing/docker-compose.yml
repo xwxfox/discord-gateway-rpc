@@ -1,0 +1,36 @@
+services:
+  valkey:
+    image: valkey/valkey:latest
+    container_name: valkey-server
+    ports:
+      - "6769:6379"
+    volumes:
+      - valkey-data:/data
+      - type: bind
+        source: ${PWD}/valkey.conf
+        target: /usr/local/etc/valkey/valkey.conf
+
+    command: valkey-server /usr/local/etc/valkey/valkey.conf
+    environment:
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:-changeme}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-a", "${VALKEY_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: valkey-dashboard
+    ports:
+    - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:valkey:6379:0:${VALKEY_PASSWORD:-changeme}
+    depends_on:
+      - valkey
+    restart: unless-stopped
+
+volumes:
+  valkey-data:
+    driver: local

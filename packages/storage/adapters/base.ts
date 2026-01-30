@@ -24,7 +24,7 @@ export abstract class BaseStorage<
   ): unknown {
     const schema = this.schema[collection]?.[key as string];
     if (!schema) {
-      throw new Error(`No schema found for ${collection}.${String(key)}`);
+      return value;
     }
     return schema.parse(value);
   }

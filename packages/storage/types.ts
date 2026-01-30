@@ -46,11 +46,26 @@ export interface WebSocketConfig {
   maxReconnectAttempts?: number;
 }
 
+export interface WebSocketServerStorageConfig {
+  url: string;
+  database?: number;
+}
+
 export interface WebSocketServerConfig {
   port?: number;
   validateToken?: (token: string) => Promise<boolean>;
-  logger?: DebugLogger
+  logger?: DebugLogger;
+  storage?: WebSocketServerStorageConfig;
 }
+
+export const UserBucketMetadataSchema = z.object({
+  userId: z.string(),
+  createdAt: z.number(),
+  lastAccessedAt: z.number(),
+  isActive: z.boolean(),
+});
+
+export type UserBucketMetadata = z.infer<typeof UserBucketMetadataSchema>;
 
 export type StorageConfig = MemoryConfig | FileConfig | RedisConfig | WebSocketConfig;
 
