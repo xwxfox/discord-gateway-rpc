@@ -34,8 +34,3 @@ export async function closePool(): Promise<void> {
     pool = null;
   }
 }
-
-export async function query<T extends pg.QueryResultRow = any>(text: string, params?: any[]): Promise<pg.QueryResult<T>> {
-  const pool = getPool();
-  return pool.query<T>(text, params);
-}

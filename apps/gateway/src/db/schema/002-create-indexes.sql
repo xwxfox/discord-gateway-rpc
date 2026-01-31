@@ -10,15 +10,9 @@ CREATE INDEX IF NOT EXISTS idx_discord_accounts_discord_user_id ON discord_accou
 CREATE INDEX IF NOT EXISTS idx_long_lived_tokens_user_id ON long_lived_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_long_lived_tokens_hash ON long_lived_tokens(token_hash);
 
--- Create indexes for jwt_sessions
-CREATE INDEX IF NOT EXISTS idx_jwt_sessions_user_id ON jwt_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_jwt_sessions_token_hash ON jwt_sessions(token_hash);
-CREATE INDEX IF NOT EXISTS idx_jwt_sessions_expires_at ON jwt_sessions(expires_at);
-
 -- Create indexes for user_settings
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- Create indexes for clients
 CREATE INDEX IF NOT EXISTS idx_clients_user_id ON clients(user_id);
 CREATE INDEX IF NOT EXISTS idx_clients_client_id ON clients(client_id);
-CREATE INDEX IF NOT EXISTS idx_clients_connected ON clients(connected);

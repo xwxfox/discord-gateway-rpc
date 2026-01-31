@@ -1,1 +1,1 @@
-export { getPool, closePool, query } from './pool.js';
+export { getPool, closePool } from './pool.js';
