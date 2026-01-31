@@ -15,7 +15,7 @@ docker run -d \
   --name paws-postgres \
   -e POSTGRES_USER=paws \
   -e POSTGRES_PASSWORD=paws_password \
-  -e POSTGRES_DB=paws \
+  -e POSTGRES_DB=detached_rpc \
   -p 5432:5432 \
   -v paws-postgres-data:/var/lib/postgresql/data \
   postgres:15
@@ -40,7 +40,7 @@ sudo -u postgres psql
 In the psql prompt:
 ```sql
 CREATE USER paws WITH PASSWORD 'paws_password';
-CREATE DATABASE paws OWNER paws;
+CREATE DATABASE detached_rpc OWNER paws;
 \q
 ```
 
@@ -56,7 +56,7 @@ psql postgres
 In the psql prompt:
 ```sql
 CREATE USER paws WITH PASSWORD 'paws_password';
-CREATE DATABASE paws OWNER paws;
+CREATE DATABASE detached_rpc OWNER paws;
 \q
 ```
 
@@ -69,7 +69,7 @@ sudo systemctl enable postgresql
 
 # Create database and user
 sudo -u postgres createuser --interactive
-sudo -u postgres createdb paws
+sudo -u postgres createdb detached_rpc
 ```
 
 ## Running Migrations
@@ -77,20 +77,21 @@ sudo -u postgres createdb paws
 ### Option 1: Using psql
 ```bash
 # Set environment variable
-export DATABASE_URL="postgresql://paws:paws_password@localhost:5432/paws"
+export DATABASE_URL="postgresql://paws:paws_password@localhost:5432/detached_rpc"
 
 # Apply migrations in order
-psql $DATABASE_URL -f src/db/schema/001-create-tables.sql
-psql $DATABASE_URL -f src/db/schema/002-create-indexes.sql
+psql $DATABASE_URL -f apps/gateway/src/db/schema/001-create-tables.sql
+psql $DATABASE_URL -f apps/gateway/src/db/schema/002-create-indexes.sql
 ```
 
 ### Option 2: Using node-postgres
 ```bash
 # Set environment variable
-export DATABASE_URL="postgresql://paws:paws_password@localhost:5432/paws"
+export DATABASE_URL="postgresql://paws:paws_password@localhost:5432/detached_rpc"
 
-# Run migration script
-bun run migrate
+# Apply migrations in order
+psql $DATABASE_URL -f apps/gateway/src/db/schema/001-create-tables.sql
+psql $DATABASE_URL -f apps/gateway/src/db/schema/002-create-indexes.sql
 ```
 
 ## Environment Variables
@@ -103,7 +104,7 @@ DATABASE_URL=postgresql://user:password@host:port/database
 
 Example:
 ```bash
-DATABASE_URL=postgresql://paws:paws_password@localhost:5432/paws
+DATABASE_URL=postgresql://paws:paws_password@localhost:5432/detached_rpc
 ```
 
 ## Verification
