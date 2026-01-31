@@ -3,13 +3,17 @@
     "tasks": {
         "build": {
             "outputs": [
-                "dist/**"
+                "dist/**",
+                ".next/**"
             ]
         },
-        "check-types": {
+        "typecheck": {
             "dependsOn": [
-                "^check-types"
+                "^typecheck"
             ]
+        },
+        "lint": {
+            "outputs": []
         },
         "dev": {
             "persistent": true,
