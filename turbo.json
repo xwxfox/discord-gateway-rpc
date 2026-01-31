@@ -4,7 +4,8 @@
         "build": {
             "outputs": [
                 "dist/**",
-                ".next/**"
+                ".next/**",
+                "!.next/cache/**"
             ]
         },
         "typecheck": {
