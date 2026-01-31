@@ -7,13 +7,10 @@
                 ".next/**"
             ]
         },
-        "typecheck": {
+        "check-types": {
             "dependsOn": [
-                "^typecheck"
+                "^check-types"
             ]
-        },
-        "lint": {
-            "outputs": []
         },
         "dev": {
             "persistent": true,
